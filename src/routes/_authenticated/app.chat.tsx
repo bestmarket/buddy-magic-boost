@@ -58,8 +58,43 @@ function ChatPage() {
   const brainstorm = workspace.data?.project.brainstorm ?? null;
   const brainstormAt = workspace.data?.project.brainstorm_at ?? null;
 
+  const storageKey = projectId ? `studio-chat:${projectId}` : null;
+  const draftKey = projectId ? `studio-chat-draft:${projectId}` : null;
+
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [text, setText] = useState("");
+
+  // Restore the conversation and any half-typed message for this project.
+  const [restoredFor, setRestoredFor] = useState<string | null>(null);
+  useEffect(() => {
+    if (!storageKey || !draftKey || restoredFor === storageKey) return;
+    try {
+      const saved = window.localStorage.getItem(storageKey);
+      setMessages(saved ? (JSON.parse(saved) as ChatMessage[]) : []);
+      setText(window.localStorage.getItem(draftKey) ?? "");
+    } catch {
+      setMessages([]);
+    }
+    setRestoredFor(storageKey);
+  }, [storageKey, draftKey, restoredFor]);
+
+  useEffect(() => {
+    if (!storageKey || restoredFor !== storageKey) return;
+    try {
+      window.localStorage.setItem(storageKey, JSON.stringify(messages));
+    } catch {
+      /* storage full or unavailable */
+    }
+  }, [messages, storageKey, restoredFor]);
+
+  useEffect(() => {
+    if (!draftKey || restoredFor !== storageKey) return;
+    try {
+      window.localStorage.setItem(draftKey, text);
+    } catch {
+      /* storage full or unavailable */
+    }
+  }, [text, draftKey, storageKey, restoredFor]);
 
   const send = useMutation({
     mutationFn: useServerFn(studioChat),
