@@ -2,7 +2,7 @@ import { useMutation } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { Check, Clapperboard, FileText, Loader2, Lightbulb, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import {
@@ -58,8 +58,43 @@ function ChatPage() {
   const brainstorm = workspace.data?.project.brainstorm ?? null;
   const brainstormAt = workspace.data?.project.brainstorm_at ?? null;
 
+  const storageKey = projectId ? `studio-chat:${projectId}` : null;
+  const draftKey = projectId ? `studio-chat-draft:${projectId}` : null;
+
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [text, setText] = useState("");
+
+  // Restore the conversation and any half-typed message for this project.
+  const [restoredFor, setRestoredFor] = useState<string | null>(null);
+  useEffect(() => {
+    if (!storageKey || !draftKey || restoredFor === storageKey) return;
+    try {
+      const saved = window.localStorage.getItem(storageKey);
+      setMessages(saved ? (JSON.parse(saved) as ChatMessage[]) : []);
+      setText(window.localStorage.getItem(draftKey) ?? "");
+    } catch {
+      setMessages([]);
+    }
+    setRestoredFor(storageKey);
+  }, [storageKey, draftKey, restoredFor]);
+
+  useEffect(() => {
+    if (!storageKey || restoredFor !== storageKey) return;
+    try {
+      window.localStorage.setItem(storageKey, JSON.stringify(messages));
+    } catch {
+      /* storage full or unavailable */
+    }
+  }, [messages, storageKey, restoredFor]);
+
+  useEffect(() => {
+    if (!draftKey || restoredFor !== storageKey) return;
+    try {
+      window.localStorage.setItem(draftKey, text);
+    } catch {
+      /* storage full or unavailable */
+    }
+  }, [text, draftKey, storageKey, restoredFor]);
 
   const send = useMutation({
     mutationFn: useServerFn(studioChat),
@@ -110,10 +145,15 @@ function ChatPage() {
   const runSaveChatScript = useServerFn(saveChatScript);
   const saveFromChat = useMutation({
     mutationFn: runSaveChatScript,
-    onSuccess: async () => {
+    onSuccess: async (res: unknown) => {
       setSavingIndex(null);
       await refresh();
-      toast.success("Saved — pick it in Studio under a video style");
+      const count = Number((res as { count?: number })?.count ?? 1);
+      toast.success(
+        count > 1
+          ? `Saved ${count} scripts — pick any of them in Studio under a video style`
+          : "Saved — pick it in Studio under a video style",
+      );
     },
     onError: (e: Error) => {
       setSavingIndex(null);
