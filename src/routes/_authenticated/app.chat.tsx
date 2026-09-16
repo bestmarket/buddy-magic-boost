@@ -145,10 +145,15 @@ function ChatPage() {
   const runSaveChatScript = useServerFn(saveChatScript);
   const saveFromChat = useMutation({
     mutationFn: runSaveChatScript,
-    onSuccess: async () => {
+    onSuccess: async (res: unknown) => {
       setSavingIndex(null);
       await refresh();
-      toast.success("Saved — pick it in Studio under a video style");
+      const count = Number((res as { count?: number })?.count ?? 1);
+      toast.success(
+        count > 1
+          ? `Saved ${count} scripts — pick any of them in Studio under a video style`
+          : "Saved — pick it in Studio under a video style",
+      );
     },
     onError: (e: Error) => {
       setSavingIndex(null);
