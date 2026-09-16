@@ -1,6 +1,6 @@
 import { useServerFn } from "@tanstack/react-start";
 import { ArrowLeft, CalendarClock, Clapperboard, Loader2, Play } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -59,6 +59,8 @@ type Props = {
   style: VideoStyle | null;
   projectId: string | undefined;
   scripts: ScriptRow[];
+  /** Scripts already picked on the page that opened this dialog. */
+  initialScriptIds?: string[];
   onClose: () => void;
   onQueued: () => Promise<unknown> | void;
 };
@@ -89,8 +91,27 @@ function Chip({
   );
 }
 
-export function ProductionDialog({ style, projectId, scripts, onClose, onQueued }: Props) {
-  const [scriptIds, setScriptIds] = useState<string[]>([]);
+export function ProductionDialog({
+  style,
+  projectId,
+  scripts,
+  initialScriptIds,
+  onClose,
+  onQueued,
+}: Props) {
+  const [scriptIds, setScriptIds] = useState<string[]>(initialScriptIds ?? []);
+  const [syncedFor, setSyncedFor] = useState<string | null>(null);
+
+  // When the dialog opens, start from whatever the page had picked.
+  useEffect(() => {
+    if (!style) {
+      setSyncedFor(null);
+      return;
+    }
+    if (syncedFor === style.id) return;
+    setScriptIds(initialScriptIds ?? []);
+    setSyncedFor(style.id);
+  }, [style, initialScriptIds, syncedFor]);
   const [languages, setLanguages] = useState<string[]>(["English"]);
   const [formats, setFormats] = useState<Array<"shorts" | "longform">>(["longform"]);
   const [captionPreset, setCaptionPreset] = useState("bold");
