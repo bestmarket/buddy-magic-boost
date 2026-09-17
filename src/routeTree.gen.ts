@@ -17,7 +17,6 @@ import { Route as AuthenticatedAppIndexRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedAppAdminRouteImport } from './routes/_authenticated/app.admin'
 import { Route as AuthenticatedAppChannelsRouteImport } from './routes/_authenticated/app.channels'
 import { Route as AuthenticatedAppChatRouteImport } from './routes/_authenticated/app.chat'
-import { Route as AuthenticatedAppProduceRouteImport } from './routes/_authenticated/app.produce'
 import { Route as AuthenticatedAppSourcesRouteImport } from './routes/_authenticated/app.sources'
 import { Route as AuthenticatedAppStudioRouteImport } from './routes/_authenticated/app.studio'
 import { Route as ApiPublicHooksScheduledVideosRouteImport } from './routes/api/public/hooks/scheduled-videos'
@@ -62,11 +61,6 @@ const AuthenticatedAppChatRoute = AuthenticatedAppChatRouteImport.update({
   path: '/chat',
   getParentRoute: () => AuthenticatedAppRoute,
 } as any)
-const AuthenticatedAppProduceRoute = AuthenticatedAppProduceRouteImport.update({
-  id: '/produce',
-  path: '/produce',
-  getParentRoute: () => AuthenticatedAppRoute,
-} as any)
 const AuthenticatedAppSourcesRoute = AuthenticatedAppSourcesRouteImport.update({
   id: '/sources',
   path: '/sources',
@@ -91,7 +85,6 @@ export interface FileRoutesByFullPath {
   '/app/admin': typeof AuthenticatedAppAdminRoute
   '/app/channels': typeof AuthenticatedAppChannelsRoute
   '/app/chat': typeof AuthenticatedAppChatRoute
-  '/app/produce': typeof AuthenticatedAppProduceRoute
   '/app/sources': typeof AuthenticatedAppSourcesRoute
   '/app/studio': typeof AuthenticatedAppStudioRoute
   '/app/': typeof AuthenticatedAppIndexRoute
@@ -103,7 +96,6 @@ export interface FileRoutesByTo {
   '/app/admin': typeof AuthenticatedAppAdminRoute
   '/app/channels': typeof AuthenticatedAppChannelsRoute
   '/app/chat': typeof AuthenticatedAppChatRoute
-  '/app/produce': typeof AuthenticatedAppProduceRoute
   '/app/sources': typeof AuthenticatedAppSourcesRoute
   '/app/studio': typeof AuthenticatedAppStudioRoute
   '/app': typeof AuthenticatedAppIndexRoute
@@ -118,7 +110,6 @@ export interface FileRoutesById {
   '/_authenticated/app/admin': typeof AuthenticatedAppAdminRoute
   '/_authenticated/app/channels': typeof AuthenticatedAppChannelsRoute
   '/_authenticated/app/chat': typeof AuthenticatedAppChatRoute
-  '/_authenticated/app/produce': typeof AuthenticatedAppProduceRoute
   '/_authenticated/app/sources': typeof AuthenticatedAppSourcesRoute
   '/_authenticated/app/studio': typeof AuthenticatedAppStudioRoute
   '/_authenticated/app/': typeof AuthenticatedAppIndexRoute
@@ -133,7 +124,6 @@ export interface FileRouteTypes {
     | '/app/admin'
     | '/app/channels'
     | '/app/chat'
-    | '/app/produce'
     | '/app/sources'
     | '/app/studio'
     | '/app/'
@@ -145,7 +135,6 @@ export interface FileRouteTypes {
     | '/app/admin'
     | '/app/channels'
     | '/app/chat'
-    | '/app/produce'
     | '/app/sources'
     | '/app/studio'
     | '/app'
@@ -159,7 +148,6 @@ export interface FileRouteTypes {
     | '/_authenticated/app/admin'
     | '/_authenticated/app/channels'
     | '/_authenticated/app/chat'
-    | '/_authenticated/app/produce'
     | '/_authenticated/app/sources'
     | '/_authenticated/app/studio'
     | '/_authenticated/app/'
@@ -231,13 +219,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAppChatRouteImport
       parentRoute: typeof AuthenticatedAppRoute
     }
-    '/_authenticated/app/produce': {
-      id: '/_authenticated/app/produce'
-      path: '/produce'
-      fullPath: '/app/produce'
-      preLoaderRoute: typeof AuthenticatedAppProduceRouteImport
-      parentRoute: typeof AuthenticatedAppRoute
-    }
     '/_authenticated/app/sources': {
       id: '/_authenticated/app/sources'
       path: '/sources'
@@ -266,7 +247,6 @@ interface AuthenticatedAppRouteChildren {
   AuthenticatedAppAdminRoute: typeof AuthenticatedAppAdminRoute
   AuthenticatedAppChannelsRoute: typeof AuthenticatedAppChannelsRoute
   AuthenticatedAppChatRoute: typeof AuthenticatedAppChatRoute
-  AuthenticatedAppProduceRoute: typeof AuthenticatedAppProduceRoute
   AuthenticatedAppSourcesRoute: typeof AuthenticatedAppSourcesRoute
   AuthenticatedAppStudioRoute: typeof AuthenticatedAppStudioRoute
   AuthenticatedAppIndexRoute: typeof AuthenticatedAppIndexRoute
@@ -276,7 +256,6 @@ const AuthenticatedAppRouteChildren: AuthenticatedAppRouteChildren = {
   AuthenticatedAppAdminRoute: AuthenticatedAppAdminRoute,
   AuthenticatedAppChannelsRoute: AuthenticatedAppChannelsRoute,
   AuthenticatedAppChatRoute: AuthenticatedAppChatRoute,
-  AuthenticatedAppProduceRoute: AuthenticatedAppProduceRoute,
   AuthenticatedAppSourcesRoute: AuthenticatedAppSourcesRoute,
   AuthenticatedAppStudioRoute: AuthenticatedAppStudioRoute,
   AuthenticatedAppIndexRoute: AuthenticatedAppIndexRoute,
