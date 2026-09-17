@@ -19,12 +19,12 @@ export type ChannelProfile = {
   visualStyle: string;
 };
 
-const VOICES: Record<string, string> = {
-  warm: "Kore",
-  bright: "Puck",
-  deep: "Charon",
-  calm: "Aoede",
-};
+/** Picks the voice chosen in the production layout, stored on the video row. */
+function voiceFor(settings: unknown, override?: string) {
+  if (override) return override;
+  const chosen = (settings as { voice?: unknown } | null)?.voice;
+  return typeof chosen === "string" && chosen ? chosen : DEFAULT_VOICE_ID;
+}
 
 export type VideoStyle = {
   id: string;
