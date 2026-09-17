@@ -637,7 +637,7 @@ export const buildScene = createServerFn({ method: "POST" })
       .object({
         videoId: z.string().uuid(),
         index: z.number().int().min(0).max(30),
-        voice: z.enum(["warm", "bright", "deep", "calm"]).default("warm"),
+        voice: z.string().min(1).max(40).optional(),
       })
       .parse(input),
   )
@@ -657,7 +657,7 @@ export const buildScene = createServerFn({ method: "POST" })
         generateSceneImage(
           `${scene.visual}. ${styleLook(video.data.style)}. Single still frame, 16:9, highly detailed, no text, no watermark, no captions.`,
         ),
-        generateNarration(scene.narration, VOICES[data.voice] ?? "Kore"),
+        generateNarration(scene.narration, voiceFor(video.data.settings, data.voice)),
       ]);
 
       const base = `${userId}/${data.videoId}/scene-${data.index}`;
@@ -953,7 +953,7 @@ export const regenerateScene = createServerFn({ method: "POST" })
         narration: z.string().max(2000).optional(),
         image: z.boolean().default(true),
         audio: z.boolean().default(false),
-        voice: z.enum(["warm", "bright", "deep", "calm"]).default("warm"),
+        voice: z.string().min(1).max(40).optional(),
       })
       .parse(input),
   )
@@ -986,7 +986,10 @@ export const regenerateScene = createServerFn({ method: "POST" })
     }
 
     if (data.audio) {
-      const bytes = await generateNarration(scene.narration, VOICES[data.voice] ?? "Kore");
+      const bytes = await generateNarration(
+        scene.narration,
+        voiceFor(video.data.settings, data.voice),
+      );
       const up = await supabase.storage
         .from("media")
         .upload(`${base}.wav`, bytes, { contentType: "audio/wav", upsert: true });
