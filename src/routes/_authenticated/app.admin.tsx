@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2, ShieldCheck, Sparkles } from "lucide-react";
+import { Loader2, ShieldCheck, Sparkles, Volume2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -11,14 +11,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { VOICE_ENGINES } from "@/lib/voices";
 import {
   claimAdmin,
   getAdminData,
   getAdminStatus,
   saveProvider,
   setEngineDefaults,
+  setVoiceEngines,
   setZeroCostMode,
   testAiRouting,
+  testVoice,
   type AdminData,
 } from "@/lib/admin.functions";
 
@@ -190,6 +193,8 @@ function AdminDashboard() {
         pending={defaultsMutation.isPending}
         onSave={(defaults) => defaultsMutation.mutate({ data: defaults })}
       />
+
+      <VoiceEnginesCard config={config} onSaved={refresh} />
 
       {categories.map((category) => (
         <Card key={category}>
@@ -377,5 +382,119 @@ function ProviderRow({
         </div>
       ) : null}
     </div>
+  );
+}
+
+function VoiceEnginesCard({
+  config,
+  onSaved,
+}: {
+  config: AdminData;
+  onSaved: () => void;
+}) {
+  const [engineIds, setEngineIds] = useState<string[]>(config.voiceEngineIds);
+  useEffect(() => setEngineIds(config.voiceEngineIds), [config.voiceEngineIds]);
+  const [playing, setPlaying] = useState<string | null>(null);
+
+  const save = useMutation({
+    mutationFn: useServerFn(setVoiceEngines),
+    onSuccess: () => {
+      toast.success("Voice engines updated");
+      onSaved();
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  const runTestVoice = useServerFn(testVoice);
+  const play = async (voiceId: string) => {
+    setPlaying(voiceId);
+    try {
+      const result = (await runTestVoice({ data: { voiceId } })) as { audio: string; mime: string };
+      const audio = new Audio(`data:${result.mime};base64,${result.audio}`);
+      await audio.play();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "The sample could not be played");
+    } finally {
+      setPlaying(null);
+    }
+  };
+
+  const both = VOICE_ENGINES.every((engine) => engineIds.includes(engine.id));
+  const toggle = (id: string) => {
+    const next = engineIds.includes(id)
+      ? engineIds.filter((value) => value !== id)
+      : [...engineIds, id];
+    setEngineIds(next);
+    save.mutate({ data: { engineIds: next } });
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <CardTitle>Free voices</CardTitle>
+            <CardDescription>
+              Both free voice packs can run at the same time. Whatever is on here is what people can
+              pick from — and hear — when they make a video.
+            </CardDescription>
+          </div>
+          <Button
+            variant={both ? "outline" : "default"}
+            disabled={save.isPending || both}
+            onClick={() => {
+              const next = VOICE_ENGINES.map((engine) => engine.id);
+              setEngineIds(next);
+              save.mutate({ data: { engineIds: next } });
+            }}
+          >
+            {save.isPending ? <Loader2 className="animate-spin" /> : <Volume2 />}
+            {both ? "Both packs on" : "Turn both on"}
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {VOICE_ENGINES.map((engine) => {
+          const on = engineIds.includes(engine.id);
+          return (
+            <div key={engine.id} className="rounded-lg border border-border p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">{engine.label}</p>
+                  <p className="text-xs text-muted-foreground">{engine.blurb}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary">Free</Badge>
+                  <Switch
+                    checked={on}
+                    disabled={save.isPending}
+                    aria-label={`Enable ${engine.label}`}
+                    onCheckedChange={() => toggle(engine.id)}
+                  />
+                </div>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {engine.voices.map((voice) => (
+                  <Button
+                    key={voice.id}
+                    size="sm"
+                    variant="outline"
+                    disabled={playing !== null}
+                    onClick={() => void play(voice.id)}
+                  >
+                    {playing === voice.id ? (
+                      <Loader2 className="animate-spin" />
+                    ) : (
+                      <Volume2 className="h-4 w-4" />
+                    )}
+                    {voice.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </CardContent>
+    </Card>
   );
 }
