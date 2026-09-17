@@ -310,7 +310,11 @@ export async function generateSceneImage(prompt: string): Promise<Uint8Array> {
 
 /* ----------------------------------------------------------------- audio */
 
-async function gatewayNarration(text: string, voice: string): Promise<Uint8Array> {
+async function gatewayNarration(
+  text: string,
+  voice: string,
+  direction = "warm, confident narrator voice",
+): Promise<Uint8Array> {
   const res = await fetch(`${GATEWAY}/audio/speech`, {
     method: "POST",
     headers: {
