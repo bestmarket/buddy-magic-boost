@@ -327,7 +327,7 @@ async function gatewayNarration(
       contents: [
         {
           role: "user",
-          parts: [{ text: `Read this aloud in a warm, confident narrator voice:\n\n${text}` }],
+          parts: [{ text: `Read this aloud, ${direction}:\n\n${text}` }],
         },
       ],
       generationConfig: {
