@@ -2,6 +2,8 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
+import { DEFAULT_VOICE_ID } from "./voices";
+
 export type Scene = {
   narration: string;
   visual: string;
