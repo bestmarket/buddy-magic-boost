@@ -87,7 +87,7 @@ function StudioPage() {
       try {
         for (let i = 0; i < scenes.length; i += 1) {
           if (scenes[i]?.imagePath && scenes[i]?.audioPath) continue;
-          await runBuildScene({ data: { videoId: video.id, index: i, voice: "warm" } });
+          await runBuildScene({ data: { videoId: video.id, index: i } });
           notify(
             `Scene ${i + 1} of ${scenes.length} is ready`,
             video.title || "Untitled video",

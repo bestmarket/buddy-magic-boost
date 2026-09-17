@@ -1,5 +1,6 @@
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, CalendarClock, Clapperboard, Loader2, Play } from "lucide-react";
+import { ArrowLeft, CalendarClock, Clapperboard, Loader2, Play, Volume2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -15,6 +16,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { CAPTION_PRESETS } from "@/lib/captionPresets";
+import { getVoiceEngines, previewVoice } from "@/lib/voice.functions";
+import { DEFAULT_VOICE_ID, voicesForEngines } from "@/lib/voices";
 import type { Scene, VideoStyle } from "@/lib/studio.functions";
 import { queueFromPrompts, queueVideos } from "@/lib/studio.functions";
 import { cn } from "@/lib/utils";
@@ -107,9 +110,35 @@ export function ProductionDialog({
   const [music, setMusic] = useState(true);
   const [mood, setMood] = useState<VideoIngredients["music"]["mood"]>("calm");
   const [sfx, setSfx] = useState(true);
+  const [voiceId, setVoiceId] = useState(DEFAULT_VOICE_ID);
+  const [previewing, setPreviewing] = useState<string | null>(null);
   const [prompts, setPrompts] = useState("");
   const [scheduledAt, setScheduledAt] = useState("");
   const [busy, setBusy] = useState<null | "now" | "later">(null);
+
+  const voiceEngines = useQuery({
+    queryKey: ["voice-engines"],
+    queryFn: () => getVoiceEngines(),
+    staleTime: 60_000,
+  });
+  const engines = voicesForEngines(voiceEngines.data?.engineIds ?? []);
+  const runPreview = useServerFn(previewVoice);
+
+  const playSample = async (id: string) => {
+    setPreviewing(id);
+    try {
+      const result = (await runPreview({ data: { voiceId: id } })) as {
+        audio: string;
+        mime: string;
+      };
+      const audio = new Audio(`data:${result.mime};base64,${result.audio}`);
+      await audio.play();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "The sample could not be played");
+    } finally {
+      setPreviewing(null);
+    }
+  };
 
   const runQueue = useServerFn(queueVideos);
   const runQueuePrompts = useServerFn(queueFromPrompts);
@@ -132,6 +161,7 @@ export function ProductionDialog({
     music: { enabled: music, mood, volume: 0.25 },
     sfx: { enabled: sfx, volume: 0.35 },
     grade,
+    voice: voiceId,
   } as Record<string, unknown>;
 
   const start = async (when: "now" | "later") => {
@@ -336,6 +366,67 @@ export function ProductionDialog({
                 </Chip>
               </div>
             </div>
+          </section>
+
+          {/* Premium voice */}
+          <section className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <Label>Premium voice</Label>
+                <p className="text-xs text-muted-foreground">
+                  Pick who reads your script, then press a voice to hear it.
+                </p>
+              </div>
+            </div>
+            {engines.map((engine) => (
+              <div key={engine.id} className="space-y-2">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  {engine.label}
+                </p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {engine.voices.map((voice) => {
+                    const on = voiceId === voice.id;
+                    return (
+                      <div
+                        key={voice.id}
+                        className={cn(
+                          "flex items-center gap-2 rounded-lg border p-3 transition-colors",
+                          on ? "border-primary bg-accent" : "border-border hover:border-primary/50",
+                        )}
+                      >
+                        <button
+                          type="button"
+                          aria-pressed={on}
+                          onClick={() => setVoiceId(voice.id)}
+                          className="min-w-0 flex-1 text-left"
+                        >
+                          <span className="block truncate text-sm font-semibold text-foreground">
+                            {voice.label}
+                          </span>
+                          <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+                            {voice.blurb}
+                          </span>
+                        </button>
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          aria-label={`Play ${voice.label}`}
+                          disabled={previewing !== null}
+                          onClick={() => void playSample(voice.id)}
+                        >
+                          {previewing === voice.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Volume2 className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </section>
 
           {/* Premium captions */}

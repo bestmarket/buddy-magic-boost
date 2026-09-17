@@ -310,7 +310,11 @@ export async function generateSceneImage(prompt: string): Promise<Uint8Array> {
 
 /* ----------------------------------------------------------------- audio */
 
-async function gatewayNarration(text: string, voice: string): Promise<Uint8Array> {
+async function gatewayNarration(
+  text: string,
+  voice: string,
+  direction = "warm, confident narrator voice",
+): Promise<Uint8Array> {
   const res = await fetch(`${GATEWAY}/audio/speech`, {
     method: "POST",
     headers: {
@@ -323,7 +327,7 @@ async function gatewayNarration(text: string, voice: string): Promise<Uint8Array
       contents: [
         {
           role: "user",
-          parts: [{ text: `Read this aloud in a warm, confident narrator voice:\n\n${text}` }],
+          parts: [{ text: `Read this aloud, ${direction}:\n\n${text}` }],
         },
       ],
       generationConfig: {
@@ -363,15 +367,11 @@ function pcmToWav(pcm: Uint8Array, sampleRate: number): Uint8Array {
   return out;
 }
 
-const ELEVEN_VOICES: Record<string, string> = {
-  Kore: "9BWtsMINqrJLrRacOk9x", // Aria
-  Puck: "TX3LPaxmHKxFdv7VOQHJ", // Liam
-  Charon: "onwK4e9ZLuTAKqWW03F9", // Daniel
-  Aoede: "EXAVITQu4vr4xnSDxMaL", // Sarah
-};
-
-async function elevenLabsNarration(key: string, text: string, voice: string): Promise<Uint8Array> {
-  const voiceId = ELEVEN_VOICES[voice] ?? ELEVEN_VOICES["Kore"]!;
+async function elevenLabsNarration(
+  key: string,
+  text: string,
+  voiceId: string,
+): Promise<Uint8Array> {
   const res = await fetch(
     `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=pcm_24000`,
     {
@@ -384,17 +384,22 @@ async function elevenLabsNarration(key: string, text: string, voice: string): Pr
   return pcmToWav(pcm, 24000);
 }
 
-/** Generates narration audio (WAV) with the voice engine selected in the admin panel. */
+/**
+ * Generates narration audio (WAV) in the voice the person picked in the
+ * production layout. Free Edge/Kokoro voices are served by the built-in
+ * zero-cost voice engine (they need a local runtime that isn't available
+ * here); a saved ElevenLabs key upgrades the same voice picks.
+ */
 export async function generateNarration(text: string, voice: string): Promise<Uint8Array> {
   const provider = await resolveProvider("tts");
+  const { findVoice } = await import("./voices");
+  const picked = findVoice(voice);
   try {
     let bytes: Uint8Array;
     if (provider.id === "elevenlabs" && provider.apiKey) {
-      bytes = await elevenLabsNarration(provider.apiKey, text, voice);
+      bytes = await elevenLabsNarration(provider.apiKey, text, picked.elevenId);
     } else {
-      // edge-tts / Kokoro run locally and are unavailable in this hosted runtime,
-      // so free voices are served by the built-in zero-cost voice engine.
-      bytes = await gatewayNarration(text, voice);
+      bytes = await gatewayNarration(text, picked.gatewayVoice, picked.direction);
     }
     await logUsage({ category: "tts", provider: provider.id });
     return bytes;
