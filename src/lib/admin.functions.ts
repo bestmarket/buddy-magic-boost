@@ -6,6 +6,8 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
+import { FREE_VOICE_ENGINE_IDS } from "./voices";
+
 export type AdminProvider = {
   id: string;
   category: "llm" | "tts" | "image";
@@ -30,6 +32,7 @@ export type AdminTelemetry = {
 export type AdminData = {
   providers: AdminProvider[];
   defaults: { llm: string; tts: string; image: string };
+  voiceEngineIds: string[];
   zeroCostMode: boolean;
   telemetry: AdminTelemetry;
 };
@@ -139,6 +142,8 @@ export const getAdminData = createServerFn({ method: "GET" })
     const zeroCostMode = Boolean(
       (settings.get("zero_cost_mode") as { enabled?: boolean } | undefined)?.enabled,
     );
+    const rawVoiceEngines = (settings.get("voice_engines") as { ids?: string[] } | undefined)?.ids;
+    const voiceEngineIds = rawVoiceEngines?.length ? rawVoiceEngines : FREE_VOICE_ENGINE_IDS;
 
     const events = (eventsRes.data ?? []) as {
       category: string;
@@ -274,4 +279,49 @@ export const testAiRouting = createServerFn({ method: "POST" })
       ms: Date.now() - started,
       reply: reply.slice(0, 200),
     };
+  });
+
+/** Chooses which free voice engines people can pick voices from (both may be on at once). */
+export const setVoiceEngines = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ engineIds: z.array(z.string().min(1).max(40)).max(10) }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const admin = await db();
+    const ids = data.engineIds.filter((id) => FREE_VOICE_ENGINE_IDS.includes(id));
+
+    const { error } = await admin
+      .from("ai_settings")
+      .upsert({ key: "voice_engines", value: { ids }, updated_at: new Date().toISOString() });
+    if (error) throw new Error(error.message);
+
+    // Keep the provider registry in step so narration routing matches the choice.
+    for (const id of FREE_VOICE_ENGINE_IDS) {
+      await admin
+        .from("ai_providers")
+        .update({ enabled: ids.includes(id), updated_at: new Date().toISOString() })
+        .eq("id", id);
+    }
+
+    const { clearConfigCache } = await import("./aiConfig.server");
+    clearConfigCache();
+    return { ok: true, engineIds: ids };
+  });
+
+/** Speaks a sample through the current voice routing so the admin can hear it works. */
+export const testVoice = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ voiceId: z.string().min(1).max(40) }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { generateNarration } = await import("./ai.server");
+    const bytes = await generateNarration(
+      "Voice check. Your narration engine is working.",
+      data.voiceId,
+    );
+    return { audio: Buffer.from(bytes).toString("base64"), mime: "audio/wav" };
   });
