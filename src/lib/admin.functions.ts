@@ -174,6 +174,7 @@ export const getAdminData = createServerFn({ method: "GET" })
     return {
       providers,
       defaults,
+      voiceEngineIds,
       zeroCostMode,
       telemetry: {
         totalCalls: events.length,
