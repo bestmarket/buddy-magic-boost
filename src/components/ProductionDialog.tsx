@@ -59,8 +59,6 @@ type Props = {
   style: VideoStyle | null;
   projectId: string | undefined;
   scripts: ScriptRow[];
-  /** Scripts already picked on the page that opened this dialog. */
-  initialScriptIds?: string[];
   onClose: () => void;
   onQueued: () => Promise<unknown> | void;
 };
@@ -95,23 +93,10 @@ export function ProductionDialog({
   style,
   projectId,
   scripts,
-  initialScriptIds,
   onClose,
   onQueued,
 }: Props) {
-  const [scriptIds, setScriptIds] = useState<string[]>(initialScriptIds ?? []);
-  const [syncedFor, setSyncedFor] = useState<string | null>(null);
-
-  // When the dialog opens, start from whatever the page had picked.
-  useEffect(() => {
-    if (!style) {
-      setSyncedFor(null);
-      return;
-    }
-    if (syncedFor === style.id) return;
-    setScriptIds(initialScriptIds ?? []);
-    setSyncedFor(style.id);
-  }, [style, initialScriptIds, syncedFor]);
+  const [scriptIds, setScriptIds] = useState<string[]>([]);
   const [languages, setLanguages] = useState<string[]>(["English"]);
   const [formats, setFormats] = useState<Array<"shorts" | "longform">>(["longform"]);
   const [captionPreset, setCaptionPreset] = useState("bold");

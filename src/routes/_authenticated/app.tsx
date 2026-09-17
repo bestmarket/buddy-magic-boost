@@ -31,7 +31,6 @@ export const Route = createFileRoute("/_authenticated/app")({
 const TABS = [
   { to: "/app/sources", label: "Sources" },
   { to: "/app/chat", label: "Chat" },
-  { to: "/app/produce", label: "Make video" },
   { to: "/app/studio", label: "Studio" },
   { to: "/app/channels", label: "Channels" },
 ] as const;
@@ -258,7 +257,7 @@ function AppLayout() {
         </main>
 
         {/* Phone bottom bar so the four areas are always one tap away. */}
-        <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-border bg-background/95 backdrop-blur md:hidden">
+        <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-border bg-background/95 backdrop-blur md:hidden">
           {TABS.map((tab) => (
             <Link
               key={tab.to}
